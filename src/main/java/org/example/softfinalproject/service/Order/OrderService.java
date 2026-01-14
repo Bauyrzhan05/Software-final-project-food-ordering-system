@@ -1,6 +1,7 @@
 package org.example.softfinalproject.service.Order;
 
 import lombok.AllArgsConstructor;
+import org.example.softfinalproject.config.kafka.OrderProducer;
 import org.example.softfinalproject.dto.Order.OrderItemDto;
 import org.example.softfinalproject.dto.Order.CreateOrderDto;
 import org.example.softfinalproject.dto.Order.OrderResponseDto;
@@ -17,6 +18,7 @@ import org.example.softfinalproject.repository.Order.OrderRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,6 +32,7 @@ public class OrderService {
     private final FoodRepository foodRepository;
     private final ExtraRepository extraRepository;
     private final OrderMapper orderMapper;
+    private final OrderProducer orderProducer;
 
 
     private User getCurrentUser() {
@@ -38,6 +41,7 @@ public class OrderService {
         return (User) auth.getPrincipal();
     }
 
+    @Transactional
     public OrderResponseDto createOrder(CreateOrderDto dto) {
         User user = getCurrentUser();
 
@@ -76,14 +80,15 @@ public class OrderService {
         order.setTotalPrice(total);
         order.setItems(items);
 
-        return orderMapper.toDto(orderRepository.save(order));
-    }
+        Order savedOrder = orderRepository.save(order);
 
-    public OrderResponseDto updateOrderStatus(Long orderId, OrderStatus status) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        order.setStatus(status);
+        try {
+            orderProducer.sendOrderCreated(savedOrder);
+        } catch (Exception e) {
+            System.err.println("Error send to kafka: " + e.getMessage());
+        }
 
-        return orderMapper.toDto(orderRepository.save(order));
+        return orderMapper.toDto(savedOrder);
     }
 
     public boolean deleteOrder(Long id){
