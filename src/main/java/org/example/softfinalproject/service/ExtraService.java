@@ -5,6 +5,8 @@ import org.example.softfinalproject.dto.ExtraDto;
 import org.example.softfinalproject.entity.Extra;
 import org.example.softfinalproject.mapper.ExtraMapper;
 import org.example.softfinalproject.repository.ExtraRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,10 +18,12 @@ public class ExtraService {
     private final ExtraRepository extraRepository;
     private final ExtraMapper extraMapper;
 
+    @Cacheable(value = "extras", key = "'all_extra'")
     public List<ExtraDto> getAll(){
         return extraMapper.toDtoList(extraRepository.findAll());
     }
 
+    @Cacheable(value = "extra", key = "#id")
     public ExtraDto getExtra(Long id){
         return extraMapper.toDto(extraRepository.findById(id).orElseThrow());
     }
@@ -28,6 +32,7 @@ public class ExtraService {
         return extraMapper.toDto(extraRepository.save(extraMapper.toEntity(extraDto)));
     }
 
+    @CacheEvict(value = "extra", key = "#id")
     public ExtraDto updateExtra(Long id, ExtraDto extraDto){
         Extra update = extraRepository.findById(id).orElseThrow();
 
@@ -37,6 +42,7 @@ public class ExtraService {
         return extraMapper.toDto(extraRepository.save(update));
     }
 
+    @CacheEvict(value = "extra", key = "#id")
     public boolean deleteExtra(Long id){
         extraRepository.deleteById(id);
         return true;

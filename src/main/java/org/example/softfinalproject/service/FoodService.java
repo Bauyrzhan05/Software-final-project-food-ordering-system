@@ -10,6 +10,8 @@ import org.example.softfinalproject.mapper.FoodMapper;
 import org.example.softfinalproject.repository.CategoryRepository;
 import org.example.softfinalproject.repository.ExtraRepository;
 import org.example.softfinalproject.repository.FoodRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,10 +25,12 @@ public class FoodService {
     private final CategoryRepository categoryRepository;
     private final ExtraRepository extraRepository;
 
+    @Cacheable(value = "foods", key = "'all_food'")
     public List<FoodDto> getAll(){
         return foodMapper.toDtoList(foodRepository.findAll());
     }
 
+    @Cacheable(value = "food", key = "#id")
     public FoodDto getFood(Long id){
         return foodMapper.toDto(foodRepository.findById(id).orElseThrow());
     }
@@ -51,6 +55,7 @@ public class FoodService {
         return foodMapper.toDto(foodRepository.save(food));
     }
 
+    @CacheEvict(value = "food", key = "#id")
     public FoodDto updateFood(Long id, FoodDto foodDto){
         Food updateFood = foodRepository.findById(id).orElseThrow();
 
@@ -68,6 +73,7 @@ public class FoodService {
         return foodMapper.toDto(foodRepository.save(updateFood));
     }
 
+    @CacheEvict(value = "food", key = "#id")
     public boolean deleteFood(Long id){
         foodRepository.deleteById(id);
         return true;
